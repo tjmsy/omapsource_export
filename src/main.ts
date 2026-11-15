@@ -46,11 +46,11 @@ map.on("load", () => {
     type: "vector",
     tiles: [
       demSource.contourProtocolUrl({
-        thresholds: { 11: [50, 200], 12: [20, 100], 13: [10, 50], 14: [5, 25] },
+        thresholds: { 15: [5, 25] },
         formlines: true,
       }),
     ],
-    minzoom: 11,
+    minzoom: 15,
     maxzoom: 18,
     attribution:
       "<a href='https://tiles.gsj.jp/tiles/elev2/index.html' target='_blank'>産総研シームレス標高タイル</a>",
@@ -60,6 +60,10 @@ map.on("load", () => {
     data: { type: "FeatureCollection", features: [] },
     attribution:
       "<a href='https://github.com/gsi-cyberjapan/optimal_bvmap' target='_blank'>国土地理院 最適化ベクトルタイル</a>",
+  });
+  map.addSource("road-edges", {
+    type: "geojson",
+    data: { type: "FeatureCollection", features: [] },
   });
   map.addLayer({
     id: "road-surface-fill",
@@ -91,6 +95,15 @@ map.on("load", () => {
       "line-dasharray": [10, 2],
     },
   });
+  map.addLayer({
+    id: "road-edge-lines",
+    type: "line",
+    source: "road-edges",
+    paint: {
+      "line-color": "#000000",
+      "line-width": 0.5,
+    },
+  });
 
   scheduleRoadSurfaceGeneration();
 });
@@ -108,6 +121,9 @@ function scheduleRoadSurfaceGeneration(): void {
     const source = map.getSource("road-surface") as
       maplibregl.GeoJSONSource | undefined;
     source?.setData({ type: "FeatureCollection", features: [] });
+    const edges = map.getSource("road-edges") as
+      maplibregl.GeoJSONSource | undefined;
+    edges?.setData({ type: "FeatureCollection", features: [] });
     return;
   }
 
@@ -143,6 +159,7 @@ function generateRoadSurfaceForView(): void {
       "https://cyberjapandata.gsi.go.jp/xyz/optimal_bvmap-v1/optimal_bvmap-v1.pmtiles",
     zoom: Math.min(16, Math.floor(map.getZoom())),
     includeArtifacts: false,
+    includeInputEdges: true,
   };
 
   roadWorker?.terminate();
@@ -164,6 +181,9 @@ function generateRoadSurfaceForView(): void {
       console.error("Road surface generation failed", event.data.error);
     } else if (event.data.result) {
       source.setData(event.data.result);
+      const edges = map.getSource("road-edges") as
+        maplibregl.GeoJSONSource | undefined;
+      edges?.setData(event.data.result.artifacts["input-rd-edg"]);
     }
     worker.terminate();
     if (roadWorker === worker) roadWorker = null;

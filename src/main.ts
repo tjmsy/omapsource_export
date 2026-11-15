@@ -99,7 +99,7 @@ function setGenerationStatus(
   message: string,
   kind: "normal" | "error" | "working" = "normal"
 ): void {
-  generationMessage.textContent = message;
+  generationMessage.textContent = `${message}（現在 ${map.getZoom().toFixed(1)}）`;
   generationStatus.dataset.state = kind;
 }
 
@@ -359,7 +359,7 @@ const exportSources: Record<
   },
   "road-edges": {
     source: "road-edges",
-    filename: "road-edges.geojson",
+    filename: "paved-area-bounding-line.geojson",
   },
 };
 

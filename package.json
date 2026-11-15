@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "maplibre-contour-formlines": "github:tjmsy/maplibre-contour-formlines",
+    "maplibre-gl": "^6.18.0",
     "optbv-roadpolylgon": "github:tjmsy/optbv-roadpolylgon"
   }
 }

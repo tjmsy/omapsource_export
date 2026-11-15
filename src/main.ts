@@ -1,60 +1,113 @@
 import "./style.css";
-import heroImg from "./assets/hero.png";
-import typescriptLogo from "./assets/typescript.svg";
-import viteLogo from "./assets/vite.svg";
-import { setupCounter } from "./counter.ts";
+import "maplibre-gl/dist/maplibre-gl.css";
+import * as maplibregl from "maplibre-gl";
+import { setWorkerUrl } from "maplibre-gl";
+import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
+import mlcontour from "maplibre-contour-formlines";
+import { registerRoadSurfaceProtocol } from "optbv-roadpolylgon";
 
-document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
-<section id="center">
-  <div class="hero">
-    <img src="${heroImg}" class="base" width="170" height="179">
-    <img src="${typescriptLogo}" class="framework" alt="TypeScript logo"/>
-    <img src="${viteLogo}" class="vite" alt="Vite logo" />
-  </div>
-  <div>
-    <h1>Get started</h1>
-    <p>Edit <code>src/main.ts</code> and save to test <code>HMR</code></p>
-  </div>
-  <button id="counter" type="button" class="counter"></button>
-</section>
+setWorkerUrl(workerUrl);
 
-<div class="ticks"></div>
-
-<section id="next-steps">
-  <div id="docs">
-    <svg class="icon" role="presentation" aria-hidden="true"><use href="/icons.svg#documentation-icon"></use></svg>
-    <h2>Documentation</h2>
-    <p>Your questions, answered</p>
-    <ul>
-      <li>
-        <a href="https://vite.dev/" target="_blank">
-          <img class="logo" src="${viteLogo}" alt="" />
-          Explore Vite
-        </a>
-      </li>
-      <li>
-        <a href="https://www.typescriptlang.org" target="_blank">
-          <img class="button-icon" src="${typescriptLogo}" alt="">
-          Learn more
-        </a>
-      </li>
-    </ul>
-  </div>
-  <div id="social">
-    <svg class="icon" role="presentation" aria-hidden="true"><use href="/icons.svg#social-icon"></use></svg>
-    <h2>Connect with us</h2>
-    <p>Join the Vite community</p>
-    <ul>
-      <li><a href="https://github.com/vitejs/vite" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#github-icon"></use></svg>GitHub</a></li>
-      <li><a href="https://chat.vite.dev/" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#discord-icon"></use></svg>Discord</a></li>
-      <li><a href="https://x.com/vite_js" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#x-icon"></use></svg>X.com</a></li>
-      <li><a href="https://bsky.app/profile/vite.dev" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#bluesky-icon"></use></svg>Bluesky</a></li>
-    </ul>
-  </div>
-</section>
-
-<div class="ticks"></div>
-<section id="spacer"></section>
+const app = document.querySelector<HTMLDivElement>("#app")!;
+app.innerHTML = `
+  <main class="map-shell">
+    <div id="map" aria-label=""></div>
+    <div class="map-caption"><span class="caption-line"></span><span></span><span class="caption-sub"></span></div>
+  </main>
 `;
 
-setupCounter(document.querySelector<HTMLButtonElement>("#counter")!);
+const demSource = new mlcontour.DemSource({
+  url: "https://gbank.gsj.jp/seamless/elev2/mixed/{z}/{x}/{y}.webp",
+  encoding: "gsi",
+  maxzoom: 18,
+  id: "terrain",
+});
+demSource.setupMaplibre(maplibregl);
+
+const roadProtocol = registerRoadSurfaceProtocol(maplibregl, {
+  pmtilesUrl:
+    "https://cyberjapandata.gsi.go.jp/xyz/optimal_bvmap-v1/optimal_bvmap-v1.pmtiles",
+  includeArtifacts: false,
+  onQualityWarning: ({ z, x, y }) => {
+    console.warn(`[road-surface] quality warning ${z}/${x}/${y}`);
+  },
+});
+
+const map = new maplibregl.Map({
+  container: "map",
+  style: "https://tiles.openfreemap.org/styles/positron",
+  center: [138.73, 35.246],
+  zoom: 15,
+  minZoom: 5,
+  maxZoom: 18,
+  maxBounds: [
+    [122, 20],
+    [154.2, 46],
+  ],
+  hash: true,
+});
+
+map.addControl(new maplibregl.NavigationControl(), "top-right");
+map.addControl(new maplibregl.ScaleControl({ unit: "metric" }));
+
+map.on("load", () => {
+  map.addSource("contours", {
+    type: "vector",
+    tiles: [
+      demSource.contourProtocolUrl({
+        thresholds: { 11: [50, 200], 12: [20, 100], 13: [10, 50], 14: [5, 25] },
+        formlines: true,
+      }),
+    ],
+    minzoom: 11,
+    maxzoom: 18,
+    attribution:
+      "<a href='https://tiles.gsj.jp/tiles/elev2/index.html' target='_blank'>産総研シームレス標高タイル</a>",
+  });
+  map.addSource("road-surface", {
+    type: "vector",
+    tiles: [roadProtocol.tiles],
+    minzoom: 15,
+    maxzoom: 16,
+    attribution:
+      "<a href='https://github.com/gsi-cyberjapan/optimal_bvmap' target='_blank'>国土地理院 最適化ベクトルタイル</a>",
+  });
+  map.addLayer({
+    id: "road-surface-fill",
+    type: "fill",
+    source: "road-surface",
+    "source-layer": "road-surface",
+    paint: {
+      "fill-color": "#F0C8B0",
+    },
+  });
+  map.addLayer({
+    id: "contour-lines",
+    type: "line",
+    source: "contours",
+    "source-layer": "contours",
+    paint: {
+      "line-color": "#BE7A54",
+      "line-width": ["match", ["get", "level"], 1, 1.7, 1],
+    },
+  });
+  map.addLayer({
+    id: "form-lines",
+    type: "line",
+    source: "contours",
+    "source-layer": "formlines",
+    layout: { "line-cap": "butt" },
+    paint: {
+      "line-color": "#BE7A54",
+      "line-width": 0.7,
+      "line-dasharray": [10, 2],
+    },
+  });
+
+});
+
+map.on("error", (event) => {
+  console.error("Map data error", event.error);
+});
+
+window.addEventListener("beforeunload", () => roadProtocol.unregister());

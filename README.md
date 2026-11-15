@@ -1,4 +1,4 @@
-# 補助曲線・舗装区域ジェネレータ
+# 補助曲線つき等高線と舗装区域ジェネレータ
 
 [Webアプリを開く](https://tjmsy.github.io/omapsource_export/)
 

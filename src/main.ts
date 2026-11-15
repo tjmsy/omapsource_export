@@ -66,6 +66,7 @@ const map = new maplibregl.Map({
   zoom: 15,
   minZoom: 5,
   maxZoom: 18,
+  maxPitch: 0,
   maxBounds: [
     [122, 20],
     [154.2, 46],

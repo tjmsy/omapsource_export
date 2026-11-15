@@ -99,7 +99,7 @@ function setGenerationStatus(
   message: string,
   kind: "normal" | "error" | "working" = "normal"
 ): void {
-  generationMessage.textContent = `${message}（現在 ${map.getZoom().toFixed(1)}）`;
+  generationMessage.textContent = `${message}（現在ズーム${map.getZoom().toFixed(1)}）`;
   generationStatus.dataset.state = kind;
 }
 

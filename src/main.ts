@@ -81,6 +81,7 @@ const generationMessage = document.querySelector<HTMLElement>(
 )!;
 const generationStatus =
   document.querySelector<HTMLElement>("#generation-status")!;
+const MIN_ROAD_GENERATION_ZOOM = 15;
 const toolsPanel = document.querySelector<HTMLElement>(".map-tools")!;
 const toolsToggle = document.querySelector<HTMLButtonElement>("#tools-toggle")!;
 const intervalSelect =
@@ -104,7 +105,11 @@ function setGenerationStatus(
   message: string,
   kind: "normal" | "error" | "working" = "normal"
 ): void {
-  generationMessage.textContent = `${message}（現在ズーム${map.getZoom().toFixed(1)}）`;
+  const zoom = map.getZoom();
+  generationMessage.textContent =
+    zoom < MIN_ROAD_GENERATION_ZOOM
+      ? `${message}（現在ズーム${zoom.toFixed(1)}）`
+      : message;
   generationStatus.dataset.state = kind;
 }
 
@@ -204,7 +209,7 @@ let generationId = 0;
 function scheduleRoadSurfaceGeneration(): void {
   if (generationTimer) clearTimeout(generationTimer);
   generationId++;
-  if (map.getZoom() < 15) {
+  if (map.getZoom() < MIN_ROAD_GENERATION_ZOOM) {
     generationId++;
     roadWorker?.terminate();
     roadWorker = null;

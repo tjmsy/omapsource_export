@@ -135,6 +135,7 @@ function addContourLayers(): void {
     {
       id: "contour-lines",
       type: "line",
+      minzoom: 15,
       source: "contours",
       "source-layer": "contours",
       paint: {
@@ -148,6 +149,7 @@ function addContourLayers(): void {
     {
       id: "form-lines",
       type: "line",
+      minzoom: 15,
       source: "contours",
       "source-layer": "formlines",
       layout: { "line-cap": "butt" },

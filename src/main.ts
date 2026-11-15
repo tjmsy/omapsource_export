@@ -122,11 +122,11 @@ function addContourLayers(): void {
     type: "vector",
     tiles: [
       demSource.contourProtocolUrl({
-        thresholds: { 15: [contourInterval, contourInterval * 5] },
+        thresholds: { 11: [contourInterval, contourInterval * 5] },
         formlines: true,
       }),
     ],
-    minzoom: 15,
+    minzoom: 11,
     maxzoom: 18,
     attribution:
       "<a href='https://tiles.gsj.jp/tiles/elev2/index.html#h_mixed' target='_blank'>産総研シームレス標高タイル 統合DEM</a>",

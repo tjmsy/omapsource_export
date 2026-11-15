@@ -54,7 +54,7 @@ demSource.setupMaplibre(maplibregl);
 const map = new maplibregl.Map({
   container: "map",
   style: "https://tiles.openfreemap.org/styles/positron",
-  center: [138.73, 35.246],
+  center: [138.3822, 35.8782],
   zoom: 15,
   minZoom: 5,
   maxZoom: 18,
@@ -102,7 +102,7 @@ function addContourLayers(): void {
     minzoom: 15,
     maxzoom: 18,
     attribution:
-      "<a href='https://tiles.gsj.jp/tiles/elev2/index.html' target='_blank'>産総研シームレス標高タイル</a>",
+      "<a href='https://tiles.gsj.jp/tiles/elev2/index.html#h_mixed' target='_blank'>産総研シームレス標高タイル 統合DEM</a>",
   });
   map.addLayer(
     {

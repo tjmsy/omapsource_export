@@ -40,6 +40,11 @@ app.innerHTML = `
         <button type="button" data-export="paved-area">道路域を保存</button>
         <button type="button" data-export="road-edges">道路縁を保存</button>
       </div>
+      <div class="attribution-heading">出典</div>
+      <div class="download-attributions">
+        <div><span>等高線・補助曲線</span><a href="https://tiles.gsj.jp/tiles/elev2/index.html#h_mixed" target="_blank" rel="noopener noreferrer">産総研シームレス標高タイル 統合DEM</a></div>
+        <div><span>道路域・道路縁</span><a href="https://github.com/gsi-cyberjapan/optimal_bvmap" target="_blank" rel="noopener noreferrer">国土地理院 最適化ベクトルタイル</a></div>
+      </div>
       </div>
     </aside>
     <div class="map-caption"><span class="caption-line"></span><span></span><span class="caption-sub"></span></div>

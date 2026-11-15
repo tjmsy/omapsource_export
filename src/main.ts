@@ -52,7 +52,7 @@ app.innerHTML = `
 `;
 
 const demSource = new mlcontour.DemSource({
-  url: "https://gbank.gsj.jp/seamless/elev2/mixed/{z}/{x}/{y}.webp",
+  url: "	https://tiles.gsj.jp/tiles/elev2/mixed/{z}/{x}/{y}.webp",
   encoding: "gsi",
   maxzoom: 18,
   id: "terrain",
@@ -336,9 +336,18 @@ function generateRoadSurfaceForView(): void {
 map.on("moveend", scheduleRoadSurfaceGeneration);
 
 map.on("error", (event) => {
+  const message = event.error.message;
+  if (
+    /networkerror|failed to fetch|fetch resource|network request failed/i.test(
+      message
+    )
+  ) {
+    console.warn("Transient map tile network error", event.error);
+    return;
+  }
   console.error("Map data error", event.error);
   setGenerationStatus(
-    `地図データの読み込みに失敗しました: ${event.error.message}`,
+    `地図データの読み込みに失敗しました: ${message}`,
     "error"
   );
 });

@@ -29,6 +29,6 @@
 
 - 等高線・補助曲線: [産総研シームレス標高タイル（統合DEM）](https://tiles.gsj.jp/tiles/elev2/index.html#h_mixed)
 - 舗装区域・道路縁: [国土地理院 最適化ベクトルタイル](https://github.com/gsi-cyberjapan/optimal_bvmap)
-- 背景地図: [OpenFreeMap Positron](https://tiles.openfreemap.org/styles/positron)
+- 背景地図: [OpenFreeMap](https://openfreemap.org/)
 
 地図データの利用条件や帰属表示については、各データ提供元の案内をご確認ください。

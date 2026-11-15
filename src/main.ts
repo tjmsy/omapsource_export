@@ -21,7 +21,7 @@ app.innerHTML = `
       <div class="tools-content" id="tools-content">
       <div class="generation-status" id="generation-status" role="status" aria-live="polite">
         <span class="status-dot"></span>
-        <span id="generation-message">ズーム15以上で道路域を生成します</span>
+        <span id="generation-message">ズーム15以上で舗装区域を生成します</span>
       </div>
       <label class="interval-control" for="contour-interval">
         <span>等高線間隔</span>
@@ -37,13 +37,13 @@ app.innerHTML = `
         <button type="button" data-export="contours">等高線（主曲線）を保存</button>
         <button type="button" data-export="index-contours">等高線（計曲線）を保存</button>
         <button type="button" data-export="formlines">等高線（補助曲線）を保存</button>
-        <button type="button" data-export="paved-area">道路域を保存</button>
+        <button type="button" data-export="paved-area">舗装区域を保存</button>
         <button type="button" data-export="road-edges">道路縁を保存</button>
       </div>
       <div class="attribution-heading">出典</div>
       <div class="download-attributions">
         <div><span>等高線・補助曲線</span><a href="https://tiles.gsj.jp/tiles/elev2/index.html#h_mixed" target="_blank" rel="noopener noreferrer">産総研シームレス標高タイル 統合DEM</a></div>
-        <div><span>道路域・道路縁</span><a href="https://github.com/gsi-cyberjapan/optimal_bvmap" target="_blank" rel="noopener noreferrer">国土地理院 最適化ベクトルタイル</a></div>
+        <div><span>舗装区域・道路縁</span><a href="https://github.com/gsi-cyberjapan/optimal_bvmap" target="_blank" rel="noopener noreferrer">国土地理院 最適化ベクトルタイル</a></div>
       </div>
       </div>
     </aside>
@@ -214,11 +214,11 @@ function scheduleRoadSurfaceGeneration(): void {
     const edges = map.getSource("road-edges") as
       maplibregl.GeoJSONSource | undefined;
     edges?.setData({ type: "FeatureCollection", features: [] });
-    setGenerationStatus("道路域はズーム15以上で表示します");
+    setGenerationStatus("舗装区域はズーム15以上で表示します");
     return;
   }
 
-  setGenerationStatus("道路域を生成する準備中…", "working");
+  setGenerationStatus("舗装区域を生成する準備中…", "working");
   generationTimer = setTimeout(() => {
     generationTimer = null;
     generateRoadSurfaceForView();
@@ -258,7 +258,7 @@ function generateRoadSurfaceForView(): void {
 
   roadWorker?.terminate();
   const requestId = ++generationId;
-  setGenerationStatus("道路域を生成しています…", "working");
+  setGenerationStatus("舗装区域を生成しています…", "working");
   const worker = new Worker(
     new URL("./road-surface.worker.ts", import.meta.url),
     { type: "module" }
@@ -275,7 +275,7 @@ function generateRoadSurfaceForView(): void {
     if (event.data.error) {
       console.error("Paved area generation failed", event.data.error);
       setGenerationStatus(
-        `道路域の生成に失敗しました: ${event.data.error}`,
+        `舗装区域の生成に失敗しました: ${event.data.error}`,
         "error"
       );
     } else if (event.data.result) {
@@ -289,10 +289,12 @@ function generateRoadSurfaceForView(): void {
       const returnedEdgeCount = edgeData.features.length;
       const problems: string[] = [];
       if (inputEdgeCount === 0) {
-        problems.push("道路縁の入力が0本のため、道路域を生成できませんでした");
+        problems.push(
+          "道路縁の入力が0本のため、舗装区域を生成できませんでした"
+        );
       } else if (surfaceCount === 0) {
         problems.push(
-          `道路縁 ${inputEdgeCount} 本が入力されましたが、道路域を生成できませんでした`
+          `道路縁 ${inputEdgeCount} 本が入力されましたが、舗装区域を生成できませんでした`
         );
       }
       if (inputEdgeCount > 0 && returnedEdgeCount === 0) {
@@ -306,8 +308,8 @@ function generateRoadSurfaceForView(): void {
       const hasProblem = problems.length > 0;
       setGenerationStatus(
         hasProblem
-          ? `道路域 ${surfaceCount} 件（${problems.join("。")}）`
-          : `道路域 ${surfaceCount} 件を表示中`,
+          ? `舗装区域 ${surfaceCount} 件（${problems.join("。")}）`
+          : `舗装区域 ${surfaceCount} 件を表示中`,
         hasProblem ? "error" : "normal"
       );
     }
@@ -317,7 +319,7 @@ function generateRoadSurfaceForView(): void {
   worker.onerror = (event) => {
     console.error("Paved area generation worker failed", event.message);
     setGenerationStatus(
-      `道路域の生成 Worker に失敗しました: ${event.message}`,
+      `舗装区域の生成 Worker に失敗しました: ${event.message}`,
       "error"
     );
     worker.terminate();

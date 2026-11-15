@@ -12,11 +12,13 @@ const app = document.querySelector<HTMLDivElement>("#app")!;
 app.innerHTML = `
   <main class="map-shell">
     <div id="map" aria-label=""></div>
-    <aside class="map-tools" aria-label="">
+    <aside class="map-tools" aria-label="地図ツール">
       <div class="tools-heading">
-        <span class="eyebrow"></span>
-        <h1></h1>
+        <button id="tools-toggle" class="tools-toggle" type="button" aria-expanded="true" aria-controls="tools-content" aria-label="パネルを折り畳む" title="パネルを折り畳む">
+          <span aria-hidden="true">−</span>
+        </button>
       </div>
+      <div class="tools-content" id="tools-content">
       <div class="generation-status" id="generation-status" role="status" aria-live="polite">
         <span class="status-dot"></span>
         <span id="generation-message">ズーム15以上で道路域を生成します</span>
@@ -35,8 +37,9 @@ app.innerHTML = `
         <button type="button" data-export="contours">等高線（主曲線）を保存</button>
         <button type="button" data-export="index-contours">等高線（計曲線）を保存</button>
         <button type="button" data-export="formlines">等高線（補助曲線）を保存</button>
-        <button type="button" data-export="road-surface">道路域を保存</button>
+        <button type="button" data-export="paved-area">道路域を保存</button>
         <button type="button" data-export="road-edges">道路縁を保存</button>
+      </div>
       </div>
     </aside>
     <div class="map-caption"><span class="caption-line"></span><span></span><span class="caption-sub"></span></div>
@@ -73,10 +76,24 @@ const generationMessage = document.querySelector<HTMLElement>(
 )!;
 const generationStatus =
   document.querySelector<HTMLElement>("#generation-status")!;
+const toolsPanel = document.querySelector<HTMLElement>(".map-tools")!;
+const toolsToggle = document.querySelector<HTMLButtonElement>("#tools-toggle")!;
 const intervalSelect =
   document.querySelector<HTMLSelectElement>("#contour-interval")!;
 let contourInterval = Number(intervalSelect.value);
 let mapLoaded = false;
+
+toolsToggle.addEventListener("click", () => {
+  const expanded = toolsToggle.getAttribute("aria-expanded") === "true";
+  toolsToggle.setAttribute("aria-expanded", String(!expanded));
+  toolsToggle.setAttribute(
+    "aria-label",
+    expanded ? "パネルを展開" : "パネルを折り畳む"
+  );
+  toolsToggle.title = expanded ? "パネルを展開" : "パネルを折り畳む";
+  toolsToggle.querySelector("span")!.textContent = expanded ? "+" : "−";
+  toolsPanel.classList.toggle("is-collapsed", expanded);
+});
 
 function setGenerationStatus(
   message: string,
@@ -142,7 +159,7 @@ intervalSelect.addEventListener("change", () => {
 });
 
 map.on("load", () => {
-  map.addSource("road-surface", {
+  map.addSource("paved-area", {
     type: "geojson",
     data: { type: "FeatureCollection", features: [] },
     attribution:
@@ -153,9 +170,9 @@ map.on("load", () => {
     data: { type: "FeatureCollection", features: [] },
   });
   map.addLayer({
-    id: "road-surface-fill",
+    id: "paved-area-fill",
     type: "fill",
-    source: "road-surface",
+    source: "paved-area",
     paint: {
       "fill-color": "#F0C8B0",
     },
@@ -186,7 +203,7 @@ function scheduleRoadSurfaceGeneration(): void {
     generationId++;
     roadWorker?.terminate();
     roadWorker = null;
-    const source = map.getSource("road-surface") as
+    const source = map.getSource("paved-area") as
       maplibregl.GeoJSONSource | undefined;
     source?.setData({ type: "FeatureCollection", features: [] });
     const edges = map.getSource("road-edges") as
@@ -204,7 +221,7 @@ function scheduleRoadSurfaceGeneration(): void {
 }
 
 function generateRoadSurfaceForView(): void {
-  const source = map.getSource("road-surface") as
+  const source = map.getSource("paved-area") as
     maplibregl.GeoJSONSource | undefined;
   if (!source) return;
 
@@ -251,7 +268,7 @@ function generateRoadSurfaceForView(): void {
   ) => {
     if (event.data.id !== generationId) return;
     if (event.data.error) {
-      console.error("Road surface generation failed", event.data.error);
+      console.error("Paved area generation failed", event.data.error);
       setGenerationStatus(
         `道路域の生成に失敗しました: ${event.data.error}`,
         "error"
@@ -293,7 +310,7 @@ function generateRoadSurfaceForView(): void {
     if (roadWorker === worker) roadWorker = null;
   };
   worker.onerror = (event) => {
-    console.error("Road surface generation worker failed", event.message);
+    console.error("Paved area generation worker failed", event.message);
     setGenerationStatus(
       `道路域の生成 Worker に失敗しました: ${event.message}`,
       "error"
@@ -315,7 +332,7 @@ map.on("error", (event) => {
 });
 
 type ExportKind =
-  "contours" | "index-contours" | "formlines" | "road-surface" | "road-edges";
+  "contours" | "index-contours" | "formlines" | "paved-area" | "road-edges";
 
 const exportSources: Record<
   ExportKind,
@@ -336,9 +353,9 @@ const exportSources: Record<
     sourceLayer: "formlines",
     filename: "form-lines.geojson",
   },
-  "road-surface": {
-    source: "road-surface",
-    filename: "road-surface.geojson",
+  "paved-area": {
+    source: "paved-area",
+    filename: "paved-area.geojson",
   },
   "road-edges": {
     source: "road-edges",

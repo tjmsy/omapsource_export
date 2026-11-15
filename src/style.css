@@ -50,19 +50,50 @@ body {
   backdrop-filter: blur(12px);
 }
 
-.tools-heading .eyebrow {
-  color: #878c81;
-  font:
-    9px "DM Mono",
-    monospace;
-  letter-spacing: 0.14em;
+.tools-heading {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-bottom: 12px;
 }
 
-.tools-heading h1 {
-  margin: 4px 0 12px;
-  color: #344038;
-  font-size: 18px;
-  line-height: 1.2;
+.tools-toggle {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  place-items: center;
+  border: 1px solid #dfe2d9;
+  border-radius: 7px;
+  color: #586557;
+  background: #fffefa;
+  font-size: 19px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.tools-toggle:hover {
+  border-color: #a9b69e;
+  background: #f3f5ee;
+}
+
+.tools-toggle:focus-visible {
+  outline: 2px solid #80936f;
+  outline-offset: 2px;
+}
+
+.map-tools.is-collapsed {
+  width: max-content;
+  min-width: 0;
+  padding: 10px 13px;
+}
+
+.map-tools.is-collapsed .tools-heading {
+  margin-bottom: 0;
+}
+
+.map-tools.is-collapsed .tools-content {
+  display: none;
 }
 
 .generation-status {

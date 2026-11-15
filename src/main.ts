@@ -4,7 +4,7 @@ import * as maplibregl from "maplibre-gl";
 import { setWorkerUrl } from "maplibre-gl";
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import mlcontour from "maplibre-contour-formlines";
-import { registerRoadSurfaceProtocol } from "optbv-roadpolylgon";
+import type { RoadSurfaceOptions, RoadSurfaceResult } from "optbv-roadpolylgon";
 
 setWorkerUrl(workerUrl);
 
@@ -23,15 +23,6 @@ const demSource = new mlcontour.DemSource({
   id: "terrain",
 });
 demSource.setupMaplibre(maplibregl);
-
-const roadProtocol = registerRoadSurfaceProtocol(maplibregl, {
-  pmtilesUrl:
-    "https://cyberjapandata.gsi.go.jp/xyz/optimal_bvmap-v1/optimal_bvmap-v1.pmtiles",
-  includeArtifacts: false,
-  onQualityWarning: ({ z, x, y }) => {
-    console.warn(`[road-surface] quality warning ${z}/${x}/${y}`);
-  },
-});
 
 const map = new maplibregl.Map({
   container: "map",
@@ -65,10 +56,8 @@ map.on("load", () => {
       "<a href='https://tiles.gsj.jp/tiles/elev2/index.html' target='_blank'>産総研シームレス標高タイル</a>",
   });
   map.addSource("road-surface", {
-    type: "vector",
-    tiles: [roadProtocol.tiles],
-    minzoom: 15,
-    maxzoom: 16,
+    type: "geojson",
+    data: { type: "FeatureCollection", features: [] },
     attribution:
       "<a href='https://github.com/gsi-cyberjapan/optimal_bvmap' target='_blank'>国土地理院 最適化ベクトルタイル</a>",
   });
@@ -76,7 +65,6 @@ map.on("load", () => {
     id: "road-surface-fill",
     type: "fill",
     source: "road-surface",
-    "source-layer": "road-surface",
     paint: {
       "fill-color": "#F0C8B0",
     },
@@ -104,10 +92,97 @@ map.on("load", () => {
     },
   });
 
+  scheduleRoadSurfaceGeneration();
 });
+
+let roadWorker: Worker | null = null;
+let generationTimer: ReturnType<typeof setTimeout> | null = null;
+let generationId = 0;
+
+function scheduleRoadSurfaceGeneration(): void {
+  if (generationTimer) clearTimeout(generationTimer);
+  if (map.getZoom() < 15) {
+    generationId++;
+    roadWorker?.terminate();
+    roadWorker = null;
+    const source = map.getSource("road-surface") as
+      maplibregl.GeoJSONSource | undefined;
+    source?.setData({ type: "FeatureCollection", features: [] });
+    return;
+  }
+
+  generationTimer = setTimeout(() => {
+    generationTimer = null;
+    generateRoadSurfaceForView();
+  }, 350);
+}
+
+function generateRoadSurfaceForView(): void {
+  const source = map.getSource("road-surface") as
+    maplibregl.GeoJSONSource | undefined;
+  if (!source) return;
+
+  const bounds = map.getBounds();
+  const clipToBbox = [
+    bounds.getWest(),
+    bounds.getSouth(),
+    bounds.getEast(),
+    bounds.getNorth(),
+  ] as const;
+  const padX = (clipToBbox[2] - clipToBbox[0]) * 0.05;
+  const padY = (clipToBbox[3] - clipToBbox[1]) * 0.05;
+  const options: RoadSurfaceOptions = {
+    bbox: [
+      clipToBbox[0] - padX,
+      clipToBbox[1] - padY,
+      clipToBbox[2] + padX,
+      clipToBbox[3] + padY,
+    ],
+    clipToBbox: [...clipToBbox],
+    pmtilesUrl:
+      "https://cyberjapandata.gsi.go.jp/xyz/optimal_bvmap-v1/optimal_bvmap-v1.pmtiles",
+    zoom: Math.min(16, Math.floor(map.getZoom())),
+    includeArtifacts: false,
+  };
+
+  roadWorker?.terminate();
+  const requestId = ++generationId;
+  const worker = new Worker(
+    new URL("./road-surface.worker.ts", import.meta.url),
+    { type: "module" }
+  );
+  roadWorker = worker;
+  worker.onmessage = (
+    event: MessageEvent<{
+      id: number;
+      result?: RoadSurfaceResult;
+      error?: string;
+    }>
+  ) => {
+    if (event.data.id !== generationId) return;
+    if (event.data.error) {
+      console.error("Road surface generation failed", event.data.error);
+    } else if (event.data.result) {
+      source.setData(event.data.result);
+    }
+    worker.terminate();
+    if (roadWorker === worker) roadWorker = null;
+  };
+  worker.onerror = (event) => {
+    console.error("Road surface generation worker failed", event.message);
+    worker.terminate();
+    if (roadWorker === worker) roadWorker = null;
+  };
+  worker.postMessage({ id: requestId, options });
+}
+
+map.on("moveend", scheduleRoadSurfaceGeneration);
 
 map.on("error", (event) => {
   console.error("Map data error", event.error);
 });
 
-window.addEventListener("beforeunload", () => roadProtocol.unregister());
+window.addEventListener("beforeunload", () => {
+  if (generationTimer) clearTimeout(generationTimer);
+  roadWorker?.terminate();
+});
